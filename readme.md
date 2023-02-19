@@ -122,8 +122,14 @@ In order to facilitate management, the export path is fixed.
 - X: Crop with Points.
 
 # git
+```
 ssh-keygen -t rsa -C <@>
 git remote add origin <REMOTE_URL>
 git remote set-url origin <URL>
 git remote -v
 git push -u -f origin main
+
+git add readme.md
+git commit -m "add readme file"
+git push origin main
+```

@@ -61,12 +61,15 @@ random
 - Click: drawing point. 点击画点。
 - S/V: Split with Points. 键入S或V，水平或竖向切割图片.
 - E: Erase. 删除展示文件（防止误删除，移动到上级0-finished目录下，如果操作错误，可以避免损失，如果已经处理的图片没有用处，可以随时删除。）
-- R: Ramdon load a picture from BookList.txt: 从 BookList.txt 中随机加载一张图片。
+- R: Ramdon load a picture from BookList.txt: 从 BookList.txt 中随机加载一张图片，算法还没弄，比较慢。
 - H/L:load per/next picture in the same dir. 加载同目录下上/下一文件（非图片闪退）
 - J/K (or mouse M-button WheelUp/Down):move up or down in the same pic. 同图片上下移动。
 - P: Merge/V-Concat with the next picture. 与下张图片纵向合并（可能闪退）
 - O: Open picture with IrfanView. 使用 IrfanView 图片查看器打开（非独立线程）。
 - D: Open picture in Explorer selection type. 资源管理器定位当前图片。
+- T: OCR current picture. 对当前打开的图片实行 OCR 文字识别。 Y 竖版繁体暂未实现。
+- M: 【【【默认输出文件不在当前文件夹】】】按M改变。
+
 
 # 预处理
 - `复制路径复制.ahk` 定义了 ctrl-4 打开软件，可以修改开启的快捷键。

@@ -19,18 +19,27 @@ import random
 # DllCall("SendMessage", UInt, WinActive("A"), UInt, 80, UInt, 1, UInt, DllCall("LoadKeyboardLayout", Str,"00000409", UInt, 1))
 
 # 程序控制
-# isOuterInItself = False   # 切图存放位置， F在别处，T在自身目录下
-isOuterInItself = True  # 切图存放在当前图片所在目录
+isOuterInItself = False   # 切图存放位置， F在别处，T在自身目录下
+# isOuterInItself = True  # 切图存放在当前图片所在目录
+
+WorklocalPath = os.getcwd()
+
 
 # 随机目录
 subjects = []
 
-# readfromTxT_list
-with open('./BookList.txt', encoding="utf-8") as f:
+#readfromTxT_list
+# file = './BookList.txt'
+# file = './BookListDone.txt'
+fileReader = './BookListDoing.txt'
+with open(fileReader, encoding="utf-8") as f:
     for line in f:
         subjects.append(line)
 f.close()
 print(subjects)
+
+subjects = []
+subjects.append(r"E:\2023阅览室")
 
 # 常量
 date1 = time.strftime("%Y-%m-%d", time.gmtime())
@@ -49,9 +58,14 @@ imgPoints = []
 # srcfile = r"...jpg"
 IsEnKeyboardLayout = 0
 
+srcfile = clipboard.paste()
+if os.path.isfile(srcfile):
+    IsSrcFile = 1
+else:
+    IsSrcFile = 0
 
 
-
+## book list init: 
 list_of_files = {}
 for subject in subjects:
     for (dirpath, dirnames, filenames) in os.walk(subject):
@@ -60,11 +74,7 @@ for subject in subjects:
                 if "0-finished" not in dirpath:
                     list_of_files[filename] = os.sep.join([dirpath, filename])
 
-srcfile = clipboard.paste()
-if os.path.isfile(srcfile):
-    IsSrcFile = 1
-else:
-    IsSrcFile = 0
+
 
 def ramdonFile():
     for c in list_of_files.keys():
@@ -155,7 +165,7 @@ def split(points):
     # curr_outerpath = os.path.join(outerpath, se)
     # if not (os.path.exists(curr_outerpath)):
     #     os.mkdir(curr_outerpath)
-    os.chdir(outerpath)
+    os.chdir(outerpath)   # 改变 工作路径
     # window
 
     #切割文件名: base.son.....
@@ -166,7 +176,7 @@ def split(points):
 
     for id, img_c in enumerate(img_cropped):
         # print(len(enumerate(img_cropped)))
-        outfile_i = outfile + "_" + str(id) + "." + Suffix
+        outfile_i = outfile + "_" + "{:02d}".format(id) + "." + Suffix
         cv2.imwrite(outfile_i, img_c)
         print("write pic in ", outfile_i)
     print(os.path.basename(srcfile) + " splits 完毕。")
@@ -177,6 +187,7 @@ def split(points):
     #         print("mode change to trim")
     mode = "norm"
     clearPoint()
+    os.chdir(WorklocalPath)   # 改回工作路径
 
 
 def crop(points):
@@ -197,14 +208,14 @@ def crop(points):
     print("crop picture")
     os.chdir(outerpath)
     # window
-    cv2.namedWindow("ROI", cv2.WINDOW_KEEPRATIO)
-    cv2.moveWindow("ROI", 40, 40);
+    # cv2.namedWindow("ROI", cv2.WINDOW_KEEPRATIO)
+    # cv2.moveWindow("ROI", 40, 40);
     # control
     #         k = cv2.waitKey(1) & 0xFF
     #     if k == ord('t'):
     #         mode = "trim"
     #         print("mode change to trim")
-    cv2.imshow("ROI", img_cropped)
+    # cv2.imshow("ROI", img_cropped)
     base1 = str(os.path.basename(srcfile)[:-4])
     date2 = str(time.strftime("%Y%m%d%H%M%S", time.gmtime()))
     outfile = base1 +"_crop_" +date2
@@ -213,11 +224,12 @@ def crop(points):
     outfilename = outfile + "."+Suffix
     cv2.imwrite(outfilename, img_cropped)
     print("write pic in ", outfile)
-    cv2.waitKey(1500)
-    cv2.destroyWindow("ROI")
+    # cv2.waitKey(1500)
+    # cv2.destroyWindow("ROI")
     global mode
     mode = "norm"
     clearPoint()
+    os.chdir(WorklocalPath)   # 改回工作路径
 
 
 def trim(x, y):
@@ -396,25 +408,108 @@ def delete_image(src):
     if os.path.exists(os.path.join(dst,os.path.basename(src))):
         dstfile = os.path.join(dst,os.path.splitext(os.path.basename(src))[0]+"_1"+ os.path.splitext(os.path.basename(src))[1])
     shutil.move(src, dstfile)
+    os.chdir(WorklocalPath)   # 改回工作路径
 
 
 def explorer():
-    os.system("explorer " + "/select,\"" + srcfile + "\"")
+    os.system("explorer " + "/select,\"" + srcfile + "\"") # explorer 打开并选中文件
     # dir_path = os.path.dirname(srcfile)
     # os.system("explorer " + "\"" + dir_path + "\"")
+
+from win32com.client import GetObject
+def wmi_sql_all_name(pname):
+    _wmi = GetObject('winmgmts:')
+    processes = _wmi.ExecQuery("Select * from win32_process where name= '%s'" % (pname))
+    try:
+        return(processes[0].ProcessId)
+    except:
+        return -1
+
+
+
+
+import tbpu
+from PPOCR_api import GetOcrApi
+import threading
+
+def OCR_text_get_word(srcfile):
+    global ocr
+    if ocr:
+        res = ocr.run(srcfile)
+        # ocr.exit()
+        if res['code'] == 100:
+            textBlocksNew = tbpu.run_merge_line_h_m_paragraph(res['data'])
+            s = ""
+            for i in range(len(textBlocksNew)):
+                s1 = textBlocksNew[i]['text']
+                s += s1
+            print(s)
+            clipboard.copy(s)
+    pass
+
+def OCR_text_Thread_init():
+    global ocr
+    argument = {'config_path': "models/config_chinese.txt"}
+    ocr = GetOcrApi("./PaddleOCR-json_v.1.3.0/PaddleOCR-json.exe", argument)
+    return
+
+
+def OCR_text_init():
+    print
+    my_thread = threading.Thread(target=OCR_text_Thread_init)
+    my_thread.start()
+
+
+def OCR_text(srcfile):
+    print(srcfile)
+    my_thread = threading.Thread(target=OCR_text_get_word, args=(srcfile,))
+    my_thread.start()
+
+
+def OCR_text_v(srcfile):  # 不成熟。
+    argument = {'config_path': "models/config_chinese_cht.txt"}
+    ocr = GetOcrApi("./PaddleOCR-json_v.1.3.0/PaddleOCR-json.exe", argument)
+    res = ocr.run(srcfile)
+    if res['code'] == 100:
+        textBlocksNew = tbpu.run_merge_line_v_lr(res['data'])
+        s = ""
+        for i in range(len(textBlocksNew)):
+            s1 = textBlocksNew[i]['text']
+            s += s1
+        print(s)
+        clipboard.copy(s)
+        print(res['data'])
 
 
 if __name__ == '__main__':
     print_hi('World!')
     IsEnKeyboardLayout = 0
-    if IsSrcFile:
-        current_image = loadimage(srcfile)
-    else:
+    if not IsSrcFile:
         srcfile = ramdonFile()
+    #     bookshift() 书架浏览
+    # else:
+    #     bookself() 本书浏览
+    current_image = loadimage(srcfile)
+    
+    showHelp="""
+    Esc: Exit 退出
+    Click: drawing point. 点击画点。
+    S/V: Split with Points. 键入S或V，水平或竖向切割图片.
+    E: Erase. 删除展示文件（防止误删除，移动到上级0-finished目录下，如果操作错误，可以避免损失，如果已经处理的图片没有用处，可以随时删除。）
+    H/L:load per/next picture in the same dir. 加载同目录下上/下一文件（非图片闪退）
+    J/K (or mouse M-button WheelUp/Down):move up or down in the same pic. 同图片上下移动。
+    P: Merge/V-Concat with the next picture. 与下张图片纵向合并（可能闪退）
+    O: Open picture with IrfanView. 使用 IrfanView 图片查看器打开。
+    D: Open picture in Explorer selection type. 资源管理器定位当前图片。
+    T: OCR current picture. 对当前打开的图片实行 OCR 文字识别。 Y 竖版繁体暂未实现。
+    M: 【【【默认输出文件不在当前文件夹】】】按M改变。
+    R: Random 随机加载，算法还没弄，比较慢
+    """
+    print(showHelp)
     # if (not os.path.isfile(srcfile)) or (not os.path.isdir(srcfile)) or (not (os.path.basename(srcfile).endswith('.jpg') or os.path.basename(srcfile).endswith('.tif'))):
     #     srcfile = ramdonFile()
     # srcfile = clipboard.paste()
-    current_image = loadimage(srcfile)
+    
     # "\"" + clipboard.paste() + "\""
     # https://docs.opencv.org/4.x/d8/d6a/group__imgcodecs__flags.html#ga61d9b0126a3e57d9277ac48327799c80
 
@@ -443,9 +538,12 @@ if __name__ == '__main__':
 
     cv2.moveWindow('image', 20, 20);
     cv2.setMouseCallback('image', click_event)
-    
+
+    isOCR = False
+    isOCRinit = False
     while 1:
         current_image = loadimage(srcfile)
+
         if isOuterInItself:
             outerpath = os.path.dirname(srcfile)
         img = cv2.imdecode(current_image, -1)
@@ -476,14 +574,36 @@ if __name__ == '__main__':
         img_cir_show=img_cir[img_show_start:img_show_start+stepLength,0:width] # 新建图片框
         cv2.imshow('image', img_cir_show)
         cv2.setWindowTitle( 'image', str(os.path.basename(srcfile)) ) #?
+
+
+
         if not IsEnKeyboardLayout:  # if 0: 不成功。return 0 成功。 
             print("change to En LoadKeyboardLayout")
             win32api.LoadKeyboardLayout("00000409", 1)
             IsEnKeyboardLayout = 1
+
+            
+        # 无展示后
+        if not isOCRinit:
+            print("OCRinit")
+            OCR_text_init()
+            isOCRinit = True
+        if not isOCR:
+            print("OCR pics")
+            OCR_text(srcfile)
+            isOCR = True
+        
         k = cv2.waitKey(1) & 0xFF
+        if k == ord('y'):
+            print("OCR V text")
+            OCR_text_v(srcfile)
         if k == ord('t'):
+            print("OCR text")
+            OCR_text(srcfile)
+        if k == ord('m'):
             mode = "trim"
-            print("mode change to trim")
+            print("isOuterInItself 取反")
+            isOuterInItself = ~isOuterInItself 
         elif k == ord('x'):
             print("mode change to crop")
             mode = "crop"
@@ -508,12 +628,14 @@ if __name__ == '__main__':
             srcfile = NextFile(srcfile)
             img_show_start=0
             IsEnKeyboardLayout = 0
+            isOCR = False
         elif k == ord('h'):
             clearPoint()
             srcfile = PreFile(srcfile) 
             img_show_start=0
             print("<---")
             IsEnKeyboardLayout = 0
+            isOCR = False
         elif k == ord('r'):
             clearPoint()
             srcfile = ramdonFile()         
@@ -526,8 +648,10 @@ if __name__ == '__main__':
         elif k == ord('o'):
             openImage(srcfile)
         elif k == ord('p'):
+            isOCR = False
             concat_next()
             srcfile = PreFile(srcfile)
+            isOCR = False   
         elif k == ord('d'):
             explorer()
         elif k == ord('e'):
@@ -536,6 +660,7 @@ if __name__ == '__main__':
             delete_image(srcfile)
             IsEnKeyboardLayout = 0
             img_show_start=0
+            isOCR = False
         elif k == 27:
             break
         # else:
@@ -543,3 +668,7 @@ if __name__ == '__main__':
 
     # cv2.waitKey(0)  # wait for a key to be pressed to exit
     cv2.destroyAllWindows()  # close the window
+    global ocr
+    if 'ocr' in locals():
+        ocr.ret.kill()
+    
